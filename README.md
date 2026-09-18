@@ -1,37 +1,27 @@
-# EduScore — Vue + Express
+# EduScore Vue + PostgreSQL
 
-Bu loyiha o‘quvchilar davomat, uy vazifasi va ballarini boshqarish uchun tayyorlangan.
+Ma'lumotlar localStorage yoki data.json emas, PostgreSQL bazasida saqlanadi.
 
-## Texnologiyalar
-- Vue 3 + Vite
-- Express
-- JSON fayl orqali server-side saqlash
-- Railway uchun tayyor
+## Railway
+PostgreSQL service qo'sh. Backend Variables ichida:
+DATABASE_URL=${{Postgres.DATABASE_URL}}
 
-## Ishga tushirish
+Start Command:
+npm start
 
-Terminalda loyiha papkasida:
+## Lokal
+server/.env:
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
+PORT=3000
 
-```bash
-npm install
+Keyin:
 npm run install:all
-npm run dev
-```
+npm start
 
-Frontend: http://localhost:5173  
-Backend: http://localhost:3000
+Frontend dev:
+npm --prefix client run dev
 
-## Demo loginlar
-
-Admin:
-- login: `admin`
-- parol: `1234`
-
-Teacher:
-- login: `anvar`
-- parol: `1234`
-
-## Muhim
-Ma'lumotlar `server/data.json` ichida saqlanadi. Shu sababli brauzer localStorage'iga bog‘liq emas va boshqa qurilmadan API orqali ham bir xil ma'lumot olinadi.
-
-Railwayda persistent storage kerak bo‘lsa, Volume ulash tavsiya qilinadi. Production uchun keyinchalik PostgreSQLga o'tkazish mumkin.
+Demo:
+admin / 1234
+anvar / 1234
+usmon / 1234

@@ -1,265 +1,39 @@
-const express = require("express");
-const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import pg from "pg";
+import path from "path";
+import {fileURLToPath} from "url";
+dotenv.config();
+const {Pool}=pg;
+const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DATABASE_URL&&!process.env.DATABASE_URL.includes("localhost")?{rejectUnauthorized:false}:false});
+const app=express(); app.use(cors()); app.use(express.json());
+const q=(sql,p=[])=>pool.query(sql,p);
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, "data.json");
-
-app.use(cors());
-app.use(express.json());
-
-function readDB() {
-  return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+async function init(){
+ await q(`CREATE TABLE IF NOT EXISTS users(id SERIAL PRIMARY KEY,username TEXT UNIQUE NOT NULL,password TEXT NOT NULL,role TEXT NOT NULL CHECK(role IN ('admin','teacher','student')),name TEXT NOT NULL,created_at TIMESTAMPTZ DEFAULT NOW());
+ CREATE TABLE IF NOT EXISTS groups(id SERIAL PRIMARY KEY,name TEXT UNIQUE NOT NULL,teacher_id INTEGER REFERENCES users(id) ON DELETE SET NULL);
+ CREATE TABLE IF NOT EXISTS students(id SERIAL PRIMARY KEY,name TEXT NOT NULL,username TEXT UNIQUE NOT NULL,password TEXT NOT NULL DEFAULT '1234',group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL,score INTEGER NOT NULL DEFAULT 0);
+ CREATE TABLE IF NOT EXISTS score_events(id SERIAL PRIMARY KEY,student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,type TEXT NOT NULL,points INTEGER NOT NULL,created_at TIMESTAMPTZ DEFAULT NOW());`);
+ const c=await q("SELECT COUNT(*)::int count FROM users");
+ if(!c.rows[0].count){
+  const t=await q("INSERT INTO users(username,password,role,name) VALUES($1,$2,'teacher',$3) RETURNING id",["anvar","1234","Anvar Teacher"]);
+  await q("INSERT INTO users(username,password,role,name) VALUES('admin','1234','admin','Administrator')");
+  const g=await q("INSERT INTO groups(name,teacher_id) VALUES($1,$2) RETURNING id",["Frontend 11",t.rows[0].id]);
+  await q("INSERT INTO students(name,username,password,group_id) VALUES($1,$2,$3,$4)",["Usmon Aman","usmon","1234",g.rows[0].id]);
+ }
 }
-
-function writeDB(db) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2), "utf8");
-}
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function attendanceScore(s) {
-  return (s.attendance || []).reduce((sum, x) => sum + (x.present ? 3 : 0), 0);
-}
-
-function homeworkScore(s) {
-  return (s.homework || []).reduce((sum, x) => {
-    if (x.status === "bor") return sum + 5;
-    if (x.status === "chala") return sum + 3;
-    if (x.status === "yoq") return sum + 1;
-    return sum;
-  }, 0);
-}
-
-function totalScore(s) {
-  return attendanceScore(s) + homeworkScore(s) + Number(s.extraScore || 0);
-}
-
-function decorateStudent(s) {
-  return {
-    ...s,
-    totalScore: totalScore(s),
-    attendanceScore: attendanceScore(s),
-    homeworkScore: homeworkScore(s)
-  };
-}
-
-function safeTeacher(t) {
-  const { password, ...safe } = t;
-  return safe;
-}
-
-function safeStudent(s) {
-  const { password, ...safe } = s;
-  return decorateStudent(safe);
-}
-
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true });
-});
-
-app.post("/api/login", (req, res) => {
-  const { username, password } = req.body;
-  const db = readDB();
-
-  if (username === "admin" && password === "1234") {
-    return res.json({ user: { id: 0, name: "Administrator", role: "admin" } });
-  }
-
-  const teacher = db.teachers.find(t => t.username === username && t.password === password);
-  if (teacher) {
-    return res.json({ user: { id: teacher.id, name: teacher.name, role: "teacher" } });
-  }
-
-  const student = db.students.find(s => s.username === username && s.password === password);
-  if (student) {
-    return res.json({ user: { id: student.id, name: student.name, role: "student" } });
-  }
-
-  return res.status(401).json({ error: "Login yoki parol noto‘g‘ri." });
-});
-
-app.get("/api/dashboard", (req, res) => {
-  const db = readDB();
-  const students = db.students.map(decorateStudent);
-  res.json({
-    teachers: db.teachers.length,
-    groups: db.groups.length,
-    students: students.length,
-    totalScore: students.reduce((a, s) => a + s.totalScore, 0)
-  });
-});
-
-app.get("/api/teachers", (req, res) => {
-  const db = readDB();
-  res.json(db.teachers.map(safeTeacher));
-});
-
-app.post("/api/teachers", (req, res) => {
-  const { name, username, password } = req.body;
-  if (!name || !username || !password) return res.status(400).json({ error: "Barcha maydonlarni to‘ldiring." });
-
-  const db = readDB();
-  if (db.teachers.some(t => t.username === username) || db.students.some(s => s.username === username)) {
-    return res.status(400).json({ error: "Bu login band." });
-  }
-
-  const teacher = { id: Date.now(), name, username, password };
-  db.teachers.push(teacher);
-  writeDB(db);
-  res.json(safeTeacher(teacher));
-});
-
-app.delete("/api/teachers/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const db = readDB();
-  db.teachers = db.teachers.filter(t => t.id !== id);
-  db.groups.forEach(g => { if (g.teacherId === id) g.teacherId = null; });
-  writeDB(db);
-  res.json({ ok: true });
-});
-
-app.get("/api/groups", (req, res) => {
-  const db = readDB();
-  res.json(db.groups);
-});
-
-app.post("/api/groups", (req, res) => {
-  const { name, teacherId } = req.body;
-  if (!name || !teacherId) return res.status(400).json({ error: "Guruh nomi va o‘qituvchi kerak." });
-
-  const db = readDB();
-  const group = { id: Date.now(), name, teacherId: Number(teacherId) };
-  db.groups.push(group);
-  writeDB(db);
-  res.json(group);
-});
-
-app.put("/api/groups/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const db = readDB();
-  const group = db.groups.find(g => g.id === id);
-  if (!group) return res.status(404).json({ error: "Guruh topilmadi." });
-
-  if (req.body.name) group.name = req.body.name;
-  if (req.body.teacherId) group.teacherId = Number(req.body.teacherId);
-
-  writeDB(db);
-  res.json(group);
-});
-
-app.get("/api/students", (req, res) => {
-  const db = readDB();
-  res.json(db.students.map(safeStudent));
-});
-
-app.post("/api/students", (req, res) => {
-  const { name, username, password, groupId } = req.body;
-  if (!name || !username || !password || !groupId) {
-    return res.status(400).json({ error: "Ism, login, parol va guruh kerak." });
-  }
-
-  const db = readDB();
-  if (db.teachers.some(t => t.username === username) || db.students.some(s => s.username === username)) {
-    return res.status(400).json({ error: "Bu login band." });
-  }
-
-  const student = {
-    id: Date.now(),
-    name,
-    username,
-    password,
-    groupId: Number(groupId),
-    attendance: [],
-    homework: [],
-    extraScore: 0
-  };
-
-  db.students.push(student);
-  writeDB(db);
-  res.json(safeStudent(student));
-});
-
-app.delete("/api/students/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const db = readDB();
-  db.students = db.students.filter(s => s.id !== id);
-  writeDB(db);
-  res.json({ ok: true });
-});
-
-app.get("/api/groups/:id/students", (req, res) => {
-  const id = Number(req.params.id);
-  const db = readDB();
-  res.json(db.students.filter(s => s.groupId === id).map(safeStudent));
-});
-
-app.post("/api/students/:id/attendance", (req, res) => {
-  const id = Number(req.params.id);
-  const { present } = req.body;
-  const db = readDB();
-  const student = db.students.find(s => s.id === id);
-
-  if (!student) return res.status(404).json({ error: "O‘quvchi topilmadi." });
-
-  const date = today();
-  student.attendance = (student.attendance || []).filter(x => x.date !== date);
-  student.attendance.push({ date, present: Boolean(present) });
-
-  writeDB(db);
-  res.json(safeStudent(student));
-});
-
-app.post("/api/students/:id/homework", (req, res) => {
-  const id = Number(req.params.id);
-  const { status } = req.body;
-  if (!["bor", "chala", "yoq"].includes(status)) {
-    return res.status(400).json({ error: "Noto‘g‘ri vazifa holati." });
-  }
-
-  const db = readDB();
-  const student = db.students.find(s => s.id === id);
-  if (!student) return res.status(404).json({ error: "O‘quvchi topilmadi." });
-
-  const date = today();
-  student.homework = (student.homework || []).filter(x => x.date !== date);
-  student.homework.push({ date, status });
-
-  writeDB(db);
-  res.json(safeStudent(student));
-});
-
-app.post("/api/students/:id/extra", (req, res) => {
-  const id = Number(req.params.id);
-  const score = Number(req.body.score);
-
-  if (!Number.isFinite(score)) return res.status(400).json({ error: "Ball son bo‘lishi kerak." });
-
-  const db = readDB();
-  const student = db.students.find(s => s.id === id);
-  if (!student) return res.status(404).json({ error: "O‘quvchi topilmadi." });
-
-  student.extraScore = Number(student.extraScore || 0) + score;
-  writeDB(db);
-  res.json(safeStudent(student));
-});
-
-app.get("/api/students/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const db = readDB();
-  const student = db.students.find(s => s.id === id);
-  if (!student) return res.status(404).json({ error: "O‘quvchi topilmadi." });
-  res.json(safeStudent(student));
-});
-
-app.get("*", (req, res) => {
-  res.json({ message: "EduScore API ishlayapti." });
-});
-
-app.listen(PORT, () => {
-  console.log(`EduScore API: http://localhost:${PORT}`);
-});
+app.get("/api/health",async(_,res)=>{try{await q("SELECT 1");res.json({ok:true,database:"connected"})}catch(e){res.status(500).json({ok:false,error:e.message})}});
+app.post("/api/login",async(req,res)=>{const r=await q("SELECT id,username,role,name FROM users WHERE username=$1 AND password=$2",[req.body.username,req.body.password]);if(!r.rowCount)return res.status(401).json({error:"Login yoki parol noto'g'ri"});res.json(r.rows[0])});
+app.get("/api/admin",async(_,res)=>{const teachers=await q("SELECT id,username,name FROM users WHERE role='teacher' ORDER BY id DESC");const groups=await q("SELECT g.id,g.name,g.teacher_id,u.name teacher_name FROM groups g LEFT JOIN users u ON u.id=g.teacher_id ORDER BY g.id DESC");const students=await q("SELECT s.id,s.name,s.username,s.group_id,s.score,g.name group_name FROM students s LEFT JOIN groups g ON g.id=s.group_id ORDER BY s.id DESC");res.json({teachers:teachers.rows,groups:groups.rows,students:students.rows})});
+app.post("/api/teachers",async(req,res)=>{try{const r=await q("INSERT INTO users(username,password,role,name) VALUES($1,$2,'teacher',$3) RETURNING id,username,name",[req.body.username,req.body.password||"1234",req.body.name]);res.json(r.rows[0])}catch(e){res.status(400).json({error:e.message})}});
+app.post("/api/groups",async(req,res)=>{try{const r=await q("INSERT INTO groups(name,teacher_id) VALUES($1,$2) RETURNING *",[req.body.name,req.body.teacher_id||null]);res.json(r.rows[0])}catch(e){res.status(400).json({error:e.message})}});
+app.post("/api/students",async(req,res)=>{try{const r=await q("INSERT INTO students(name,username,password,group_id) VALUES($1,$2,$3,$4) RETURNING *",[req.body.name,req.body.username,req.body.password||"1234",req.body.group_id||null]);res.json(r.rows[0])}catch(e){res.status(400).json({error:e.message})}});
+app.get("/api/teacher/:id",async(req,res)=>{const groups=await q("SELECT id,name,teacher_id FROM groups WHERE teacher_id=$1 ORDER BY id",[req.params.id]);const students=await q("SELECT s.id,s.name,s.username,s.group_id,s.score,g.name group_name FROM students s LEFT JOIN groups g ON g.id=s.group_id WHERE g.teacher_id=$1 ORDER BY s.id",[req.params.id]);res.json({groups:groups.rows,students:students.rows})});
+app.get("/api/student/:id",async(req,res)=>{const s=await q("SELECT s.id,s.name,s.username,s.score,g.name group_name FROM students s LEFT JOIN groups g ON g.id=s.group_id WHERE s.id=$1",[req.params.id]);if(!s.rowCount)return res.status(404).json({error:"Student topilmadi"});const e=await q("SELECT id,type,points,created_at FROM score_events WHERE student_id=$1 ORDER BY id DESC",[req.params.id]);res.json({student:s.rows[0],events:e.rows})});
+async function addScore(id,type,points){await q("INSERT INTO score_events(student_id,type,points) VALUES($1,$2,$3)",[id,type,points]);return q("UPDATE students SET score=score+$1 WHERE id=$2 RETURNING id,score",[points,id])}
+app.post("/api/attendance",async(req,res)=>{const p=req.body.present?3:0;res.json(p?(await addScore(req.body.student_id,"attendance",p)).rows[0]:(await q("SELECT id,score FROM students WHERE id=$1",[req.body.student_id])).rows[0])});
+app.post("/api/homework",async(req,res)=>{const p={"Bor":5,"Chala":3,"Yo'q":1}[req.body.status];if(p===undefined)return res.status(400).json({error:"Noto'g'ri status"});res.json((await addScore(req.body.student_id,"homework:"+req.body.status,p)).rows[0])});
+app.post("/api/score",async(req,res)=>{const p=Number(req.body.points);if(!Number.isFinite(p))return res.status(400).json({error:"Ball son bo'lishi kerak"});res.json((await addScore(req.body.student_id,"extra",p)).rows[0])});
+const __dirname=path.dirname(fileURLToPath(import.meta.url));app.use(express.static(path.join(__dirname,"../client/dist")));app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"../client/dist/index.html")));
+const port=process.env.PORT||3000;init().then(()=>app.listen(port,()=>console.log("EduScore:",port))).catch(e=>{console.error(e);process.exit(1)});
