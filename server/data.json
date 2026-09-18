@@ -1,0 +1,29 @@
+{
+  "teachers": [
+    {
+      "id": 1,
+      "name": "Aliyev Anvar",
+      "username": "anvar",
+      "password": "1234"
+    }
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "name": "Frontend 11",
+      "teacherId": 1
+    }
+  ],
+  "students": [
+    {
+      "id": 1,
+      "name": "Usmon Aman",
+      "username": "usmon",
+      "password": "1234",
+      "groupId": 1,
+      "attendance": [],
+      "homework": [],
+      "extraScore": 0
+    }
+  ]
+}
