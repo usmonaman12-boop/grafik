@@ -1,0 +1,24 @@
+{% extends "core/base.html" %}
+{% block title %}O'qituvchi paneli{% endblock %}
+{% block content %}
+<h1>Mening guruhlarim</h1>
+
+<div class="card">
+  <h3>Yangi guruh yaratish</h3>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.name }}
+    <button class="btn btn-success" type="submit">Guruh yaratish</button>
+  </form>
+</div>
+
+{% for g in groups %}
+  <a class="group-card" href="{% url 'group_detail' g.id %}">
+    <strong>{{ g.name }}</strong>
+    <span class="pill">{{ g.student_count }} o'quvchi</span>
+    {% if g.telegram_chat_id %}<span class="pill" style="background:#e4efe4;color:#1e5631;">Telegram ulangan</span>{% else %}<span class="pill" style="background:#f4e9c9;color:#7d6608;">Telegram ulanmagan</span>{% endif %}
+  </a>
+{% empty %}
+  <p class="muted">Hali guruh yo'q. Yuqoridan yangi guruh yarating.</p>
+{% endfor %}
+{% endblock %}

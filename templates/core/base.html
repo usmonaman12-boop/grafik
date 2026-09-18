@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Maktab bal tizimi{% endblock %}</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --text:#1a1a1a;
+    --border:#d9d9d9;
+    --primary:#2c3e50;      /* dark slate blue - serious */
+    --primary-hover:#1c2833;
+    --danger:#7b241c;       /* dark red */
+    --danger-hover:#5b1a13;
+    --success:#1e5631;      /* dark green */
+    --success-hover:#153f23;
+    --warn:#7d6608;         /* dark mustard */
+    --warn-hover:#5c4b06;
+    --muted:#555555;
+    --card-bg:#fafafa;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    line-height:1.5;
+  }
+  header{
+    background:var(--primary);
+    color:#fff;
+    padding:14px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  header a{color:#fff;text-decoration:none;font-weight:600;}
+  header .nav-right{display:flex;gap:14px;align-items:center;font-size:14px;}
+  main{max-width:1000px;margin:0 auto;padding:24px 18px 60px;}
+  h1,h2,h3{color:var(--text);}
+  .card{
+    background:var(--card-bg);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:18px;
+    margin-bottom:18px;
+  }
+  table{width:100%;border-collapse:collapse;background:#fff;}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;font-size:14px;}
+  th{background:#eeeeee;}
+  .input{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:#fff;
+    color:var(--text);
+    font-size:14px;
+    margin-bottom:10px;
+  }
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px;}
+  .btn{
+    display:inline-block;
+    padding:9px 16px;
+    border-radius:6px;
+    border:none;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:600;
+    text-decoration:none;
+    color:#fff;
+    background:var(--primary);
+  }
+  .btn:hover{background:var(--primary-hover);}
+  .btn-danger{background:var(--danger);}
+  .btn-danger:hover{background:var(--danger-hover);}
+  .btn-success{background:var(--success);}
+  .btn-success:hover{background:var(--success-hover);}
+  .btn-warn{background:var(--warn);}
+  .btn-warn:hover{background:var(--warn-hover);}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+  .btn-group{display:flex;gap:6px;flex-wrap:wrap;}
+  .radio-btns{display:flex;gap:6px;flex-wrap:wrap;}
+  .radio-btns label{
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:6px 10px;
+    cursor:pointer;
+    font-size:13px;
+    color:var(--text);
+    background:#fff;
+  }
+  .radio-btns input{margin-right:5px;}
+  .radio-btns input:checked + span, .radio-selected{font-weight:700;}
+  .messages{list-style:none;padding:0;margin:0 0 16px;}
+  .messages li{
+    padding:10px 14px;
+    border-radius:6px;
+    background:#eef7ee;
+    border:1px solid #b6d7b6;
+    color:#1e5631;
+    margin-bottom:8px;
+    font-size:14px;
+  }
+  .muted{color:var(--muted);font-size:13px;}
+  .score{font-size:34px;font-weight:800;color:var(--primary);}
+  .pill{
+    display:inline-block;
+    padding:2px 9px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:700;
+    background:#e4e4e4;
+    color:#333;
+  }
+  a.link{color:var(--primary);}
+  .group-card{
+    display:block;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:14px 16px;
+    margin-bottom:10px;
+    text-decoration:none;
+    color:var(--text);
+    background:#fff;
+  }
+  .group-card:hover{border-color:var(--primary);}
+  code{background:#eee;padding:2px 6px;border-radius:4px;}
+</style>
+</head>
+<body>
+<header>
+  <a href="{% url 'dashboard' %}">📚 Maktab bal tizimi</a>
+  <div class="nav-right">
+    {% if user.is_authenticated %}
+      <span>{{ user.get_full_name|default:user.username }} ({{ user.get_role_display }})</span>
+      <a href="{% url 'logout' %}">Chiqish</a>
+    {% endif %}
+  </div>
+</header>
+<main>
+  {% if messages %}
+  <ul class="messages">
+    {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

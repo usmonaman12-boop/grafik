@@ -1,1 +1,0 @@
-{"name":"eduscore-postgres","private":true,"scripts":{"start":"node server/server.js","dev":"concurrently \"npm run dev:server\" \"npm run dev:client\"","dev:server":"node server/server.js","dev:client":"npm --prefix client run dev","install:all":"npm install && npm --prefix client install && npm --prefix server install"},"dependencies":{"concurrently":"^9.2.1"}}

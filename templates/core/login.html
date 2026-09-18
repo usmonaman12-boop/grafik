@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}
+{% block title %}Kirish{% endblock %}
+{% block content %}
+<div class="card" style="max-width:380px;margin:40px auto;">
+  <h2>Tizimga kirish</h2>
+  <form method="post">
+    {% csrf_token %}
+    <label>Login</label>
+    {{ form.username }}
+    <label>Parol</label>
+    {{ form.password }}
+    {% if form.errors %}
+      <p style="color:#7b241c;font-size:13px;">Login yoki parol noto'g'ri.</p>
+    {% endif %}
+    <button class="btn" type="submit" style="width:100%;">Kirish</button>
+  </form>
+</div>
+{% endblock %}

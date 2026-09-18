@@ -1,0 +1,67 @@
+{% extends "core/base.html" %}
+{% block title %}Bugungi baholash{% endblock %}
+{% block content %}
+<p><a class="link" href="{% url 'group_detail' group.id %}">&larr; {{ group.name }}</a></p>
+<h1>{{ group.name }} — {{ today|date:"d.m.Y" }}</h1>
+<p class="muted">Davomat: Bor = +3 ball (avtomatik). Uy vazifasi: Bor = +5, Chala = +3, Yo'q = +0 (va "vazifa qilinmadi" hisoblanadi). Qo'shimcha ball xohlaganingizcha kiritishingiz mumkin.</p>
+
+<form method="post" id="dayform">
+  {% csrf_token %}
+  {% for sp, rec in rows %}
+  <div class="card">
+    <h3 style="margin-top:0;">{{ sp.user.get_full_name|default:sp.user.username }} <span class="pill">Umumiy: {{ sp.total_score }}</span></h3>
+
+    <label>Davomat</label>
+    <div class="radio-btns btnrow" data-name="attendance_{{ sp.user.id }}">
+      <label class="{% if rec.attendance_status == 'bor' %}radio-selected{% endif %}">
+        <input type="radio" name="attendance_{{ sp.user.id }}" value="bor" {% if rec.attendance_status == 'bor' %}checked{% endif %}> Bor (+3)
+      </label>
+      <label class="{% if rec.attendance_status == 'yuq' %}radio-selected{% endif %}">
+        <input type="radio" name="attendance_{{ sp.user.id }}" value="yuq" {% if rec.attendance_status == 'yuq' %}checked{% endif %}> Yo'q
+      </label>
+    </div>
+
+    <label>Uy vazifasi</label>
+    <div class="radio-btns btnrow" data-name="homework_{{ sp.user.id }}">
+      <label class="{% if rec.homework_status == 'bor' %}radio-selected{% endif %}">
+        <input type="radio" name="homework_{{ sp.user.id }}" value="bor" {% if rec.homework_status == 'bor' %}checked{% endif %}> Bor (+5)
+      </label>
+      <label class="{% if rec.homework_status == 'chala' %}radio-selected{% endif %}">
+        <input type="radio" name="homework_{{ sp.user.id }}" value="chala" {% if rec.homework_status == 'chala' %}checked{% endif %}> Chala (+3)
+      </label>
+      <label class="{% if rec.homework_status == 'yuq' %}radio-selected{% endif %}">
+        <input type="radio" name="homework_{{ sp.user.id }}" value="yuq" {% if rec.homework_status == 'yuq' %}checked{% endif %}> Yo'q (0)
+      </label>
+    </div>
+
+    <label>Qo'shimcha ball</label>
+    <input class="input" style="max-width:140px;" type="number" name="extra_{{ sp.user.id }}" value="{{ rec.extra_points|default:0 }}">
+  </div>
+  {% empty %}
+  <p class="muted">Bu guruhda o'quvchi yo'q.</p>
+  {% endfor %}
+
+  {% if rows %}
+  <button class="btn btn-success" type="submit" style="font-size:16px;padding:12px 28px;">✅ Tayyor — saqlash va yuborish</button>
+  {% endif %}
+</form>
+
+<script>
+document.querySelectorAll('.btnrow').forEach(function(row){
+  row.querySelectorAll('input[type=radio]').forEach(function(input){
+    input.addEventListener('change', function(){
+      row.querySelectorAll('label').forEach(function(l){ l.classList.remove('radio-selected'); });
+      input.closest('label').classList.add('radio-selected');
+    });
+  });
+});
+</script>
+
+<style>
+  .radio-selected{
+    background:var(--primary) !important;
+    color:#fff !important;
+    border-color:var(--primary) !important;
+  }
+</style>
+{% endblock %}

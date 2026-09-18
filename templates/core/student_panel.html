@@ -1,0 +1,30 @@
+{% extends "core/base.html" %}
+{% block title %}Mening balim{% endblock %}
+{% block content %}
+<h1>Salom, {{ user.get_full_name|default:user.username }}</h1>
+
+<div class="card" style="text-align:center;">
+  <div class="muted">Umumiy to'plangan ball</div>
+  <div class="score">{{ profile.total_score }}</div>
+  {% if profile.group %}<div class="muted">Guruh: {{ profile.group.name }}</div>{% endif %}
+  <div class="muted">Vazifa qilinmagan kunlar soni: {{ profile.missed_homework_count }}</div>
+</div>
+
+<div class="card">
+  <h3>Kunlik tarix</h3>
+  <table>
+    <tr><th>Sana</th><th>Davomat</th><th>Uy vazifasi</th><th>Qo'shimcha</th><th>Kun bali</th></tr>
+    {% for r in records %}
+    <tr>
+      <td>{{ r.date|date:"d.m.Y" }}</td>
+      <td>{{ r.get_attendance_status_display|default:"-" }}</td>
+      <td>{{ r.get_homework_status_display|default:"-" }}</td>
+      <td>{{ r.extra_points }}</td>
+      <td><strong>{{ r.day_total }}</strong></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" class="muted">Hali yozuv yo'q.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
