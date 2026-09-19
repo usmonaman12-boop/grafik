@@ -4,13 +4,17 @@
 <p><a class="link" href="{% url 'teacher_panel' %}">&larr; Guruhlar</a></p>
 <h1>{{ group.name }}</h1>
 
-<div class="btn-group" style="margin-bottom:18px;">
-  <a class="btn" href="{% url 'daily_session' group.id %}">Bugungi baholash</a>
-  <a class="btn btn-warn" href="{% url 'group_link_info' group.id %}">Telegramga ulash</a>
+<div class="btn-group">
+  <a class="btn" href="{% url 'daily_session' group.id %}">📝 Bugungi baholash</a>
+  <a class="btn btn-warn" href="{% url 'group_link_info' group.id %}">🔗 Telegramga ulash</a>
+  <form method="post" action="{% url 'group_recalculate' group.id %}" onsubmit="return confirm('Bu guruhdagi barcha o\'quvchilarning ballari qayta hisoblansinmi?');">
+    {% csrf_token %}
+    <button class="btn btn-ghost" type="submit">🔄 Ballarni yangilash</button>
+  </form>
 </div>
 
 <div class="card">
-  <h3>O'quvchi qo'shish</h3>
+  <h3>➕ O'quvchi qo'shish</h3>
   <form method="post">
     {% csrf_token %}
     <label>Login</label>{{ form.username }}
@@ -23,19 +27,21 @@
 </div>
 
 <div class="card">
-  <h3>O'quvchilar ({{ students.count }})</h3>
+  <h3>👥 O'quvchilar ({{ students.count }})</h3>
+  <div class="table-wrap">
   <table>
     <tr><th>Ism familiya</th><th>Login</th><th>Umumiy bal</th><th>Vazifa qilinmagan kunlar</th></tr>
     {% for sp in students %}
     <tr>
       <td>{{ sp.user.get_full_name|default:"-" }}</td>
       <td>{{ sp.user.username }}</td>
-      <td><strong>{{ sp.total_score }}</strong></td>
-      <td>{{ sp.missed_homework_count }}</td>
+      <td><strong class="pill pill-primary">{{ sp.total_score }}</strong></td>
+      <td>{% if sp.missed_homework_count > 0 %}<span class="pill pill-danger">{{ sp.missed_homework_count }}</span>{% else %}<span class="muted">0</span>{% endif %}</td>
     </tr>
     {% empty %}
     <tr><td colspan="4" class="muted">Hali o'quvchi yo'q.</td></tr>
     {% endfor %}
   </table>
+  </div>
 </div>
 {% endblock %}

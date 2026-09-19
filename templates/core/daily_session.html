@@ -9,7 +9,7 @@
   {% csrf_token %}
   {% for sp, rec in rows %}
   <div class="card">
-    <h3 style="margin-top:0;">{{ sp.user.get_full_name|default:sp.user.username }} <span class="pill">Umumiy: {{ sp.total_score }}</span></h3>
+    <h3 style="margin-top:0;">{{ sp.user.get_full_name|default:sp.user.username }} <span class="pill pill-primary">Umumiy: {{ sp.total_score }}</span></h3>
 
     <label>Davomat</label>
     <div class="radio-btns btnrow" data-name="attendance_{{ sp.user.id }}">

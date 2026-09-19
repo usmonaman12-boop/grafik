@@ -75,6 +75,34 @@ def admin_delete_teacher(request, user_id):
     return redirect("admin_panel")
 
 
+def _recalculate_students(students_qs):
+    """Recompute total_score / missed_homework_count for a queryset of
+    StudentProfile objects from their finalized DailyRecord history.
+    Fixes any drift (e.g. records edited directly via /django-admin/)."""
+    count = 0
+    for sp in students_qs:
+        records = DailyRecord.objects.filter(student=sp.user, finalized=True)
+        total = 0
+        missed = 0
+        for r in records:
+            total += r.day_total
+            if r.homework_status == DailyRecord.HW_YUQ:
+                missed += 1
+        sp.total_score = total
+        sp.missed_homework_count = missed
+        sp.save(update_fields=["total_score", "missed_homework_count"])
+        count += 1
+    return count
+
+
+@user_passes_test(is_admin, login_url="login")
+def admin_recalculate_all(request):
+    if request.method == "POST":
+        n = _recalculate_students(StudentProfile.objects.all())
+        messages.success(request, f"Barcha o'quvchilar balli yangilandi ({n} ta).")
+    return redirect("admin_panel")
+
+
 # ---------------- TEACHER ----------------
 
 @user_passes_test(is_teacher, login_url="login")
@@ -112,6 +140,15 @@ def group_detail(request, group_id):
         request, "core/group_detail.html",
         {"group": group, "students": students, "form": form},
     )
+
+
+@user_passes_test(is_teacher, login_url="login")
+def group_recalculate(request, group_id):
+    group = get_object_or_404(Group, id=group_id, teacher=request.user)
+    if request.method == "POST":
+        n = _recalculate_students(StudentProfile.objects.filter(group=group))
+        messages.success(request, f"\"{group.name}\" guruhidagi ballar yangilandi ({n} ta o'quvchi).")
+    return redirect("group_detail", group_id=group.id)
 
 
 @user_passes_test(is_teacher, login_url="login")

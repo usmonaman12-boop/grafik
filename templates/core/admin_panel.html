@@ -4,7 +4,7 @@
 <h1>Admin panel</h1>
 
 <div class="card">
-  <h3>Yangi o'qituvchi qo'shish</h3>
+  <h3>➕ Yangi o'qituvchi qo'shish</h3>
   <form method="post">
     {% csrf_token %}
     <label>Login (username)</label>{{ form.username }}
@@ -17,7 +17,14 @@
 </div>
 
 <div class="card">
-  <h3>O'qituvchilar ro'yxati</h3>
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+    <h3 style="margin:0;">👩‍🏫 O'qituvchilar ro'yxati</h3>
+    <form method="post" action="{% url 'admin_recalculate_all' %}" onsubmit="return confirm('Barcha o\'quvchilarning ballari qayta hisoblansinmi?');">
+      {% csrf_token %}
+      <button class="btn btn-ghost btn-sm" type="submit">🔄 Hamma ballarni yangilash</button>
+    </form>
+  </div>
+  <div class="table-wrap">
   <table>
     <tr><th>Ism familiya</th><th>Login</th><th>Telefon</th><th>Guruhlari</th><th></th></tr>
     {% for t in teachers %}
@@ -37,5 +44,6 @@
     <tr><td colspan="5" class="muted">Hali o'qituvchi yo'q.</td></tr>
     {% endfor %}
   </table>
+  </div>
 </div>
 {% endblock %}
