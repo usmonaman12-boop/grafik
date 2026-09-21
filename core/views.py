@@ -152,6 +152,17 @@ def group_recalculate(request, group_id):
 
 
 @user_passes_test(is_teacher, login_url="login")
+def group_delete_student(request, group_id, student_id):
+    group = get_object_or_404(Group, id=group_id, teacher=request.user)
+    sp = get_object_or_404(StudentProfile, id=student_id, group=group)
+    if request.method == "POST":
+        name = sp.user.get_full_name() or sp.user.username
+        sp.user.delete()  # cascades: StudentProfile + DailyRecord ham o'chadi
+        messages.success(request, f"\"{name}\" o'quvchi ro'yxatdan o'chirildi.")
+    return redirect("group_detail", group_id=group.id)
+
+
+@user_passes_test(is_teacher, login_url="login")
 def group_link_info(request, group_id):
     group = get_object_or_404(Group, id=group_id, teacher=request.user)
     return render(request, "core/group_link_info.html", {"group": group})

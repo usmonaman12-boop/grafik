@@ -14,6 +14,7 @@ urlpatterns = [
     path("teacher/", views.teacher_panel, name="teacher_panel"),
     path("teacher/group/<int:group_id>/", views.group_detail, name="group_detail"),
     path("teacher/group/<int:group_id>/recalc/", views.group_recalculate, name="group_recalculate"),
+    path("teacher/group/<int:group_id>/student/<int:student_id>/delete/", views.group_delete_student, name="group_delete_student"),
     path("teacher/group/<int:group_id>/link/", views.group_link_info, name="group_link_info"),
     path("teacher/group/<int:group_id>/day/", views.daily_session, name="daily_session"),
 
